@@ -1,0 +1,19 @@
+{
+	"ImportPath": "github.com/iamduo/workq",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v60",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/iamduo/go-workq",
+			"Rev": "9bc3cb45a201a5ec5d1799292d10c62e8629f1b2"
+		},
+		{
+			"ImportPath": "github.com/satori/go.uuid",
+			"Comment": "v1.0.0",
+			"Rev": "f9ab0dce87d815821e221626b772e3475a0d2749"
+		}
+	]
+}
