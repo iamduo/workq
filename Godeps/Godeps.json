@@ -8,7 +8,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/iamduo/go-workq",
-			"Rev": "9bc3cb45a201a5ec5d1799292d10c62e8629f1b2"
+			"Rev": "ad68c6411f66df548f58830842c94f413a27253e"
 		},
 		{
 			"ImportPath": "github.com/satori/go.uuid",
