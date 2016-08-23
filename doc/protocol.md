@@ -21,6 +21,7 @@
       - [inspect server](#inspect-server)
   - [Errors](#errors)
   - [Glossary](#glossary)
+    - [Priority](#priority)
   	- [TTR - Time-to-run](#ttr---time-to-run)
   	- [TTL - Time-to-live](#ttl---time-to-live)
   	- [Lease](#lease)
@@ -728,6 +729,10 @@ All error responses start with `-` as the first character to signify an error ty
 * `-NOT-FOUND` - Job ID specified not found.
 
 ## Glossary
+
+### Priority
+
+Priorities are numeric from 0 (default, and lowest) - 4,294,967,295 (highest, 2^32) and can control the order of job execution within a single job queue. Higher priorities are executed first.
 
 ### TTR - Time-to-run
 

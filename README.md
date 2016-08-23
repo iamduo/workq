@@ -2,11 +2,10 @@
 
 Workq is a job scheduling server strictly focused on simplifying job processing and streamlining coordination. It can run jobs in blocking foreground or non-blocking background mode.
 
-Workq runs as a standalone TCP server and implements a simple, text based protocol. Clients interact with Workq over a TCP socket in a request/response model with text [commands](doc/protocol.md#commands). Please refer to the [full protocol doc](doc/protocol.md) for details.
+Workq runs as a standalone TCP server and implements a simple, text based protocol. Clients interact with Workq over a TCP socket in a request/response model with text [commands](doc/protocol.md#client-commands). Please refer to the [full protocol doc](doc/protocol.md) for details.
 
 ## Supported Features
 
-* Individual job queues by name.
 * Asyncronous and Syncronous processing
 	* Submit a job and grab a result at a later time up to [TTL](#ttl---time-to-live).
 	* Submit a job and wait for the result synchronously ([Gearman](http://gearman.org) style).
@@ -18,8 +17,31 @@ Workq runs as a standalone TCP server and implements a simple, text based protoc
 
 ### Roadmapped
 
-- [ ] Command Log (disk backed durability).
+- [ ] Command Log (Data Persistence).
 - [ ] Performance Benchmarks
+
+
+## What is Workq useful for?
+
+**Scheduling & Timers**
+
+Schedule adhoc one-time jobs at a future UTC time. Workq can be used as a timer for any application event scheduling. Compare this to the usual alternative of building scheduling schema into an existing datastore, writing a custom worker to poll the datastore, and finally building in locking & state management to manage dispatching.
+
+In Workq, you [schedule the job](#schedule-a-job), [lease the job](##leasing-jobs), and [complete the job](#completing-jobs).
+
+**Concurrency Control**
+
+Workq can enable concurrency especially in languages that do not have built-in concurrency. [Background multiple jobs](#add-a-job-background), [process them with multiple workers](#leasing-jobs), and [retrieve results](#retrieving-job-results) from within a single process.
+
+**Streamlining & Persistent Processing**
+
+Workq will retry jobs from [TTR](#ttr---time-to-run) (time-to-run) timeouts and/or from explicit job failures through the [max-attempts](#max-attempts) and [max-fails](#max-fails) flags. Retry is a job execution specification and does not require any custom worker logic. 
+
+**Distributing Work**
+
+Distribute work to multiple workers using Workq as the coordinator. In addition, Workq is language agnostic, submit a job from one language and process it in another.
+
+Workq can also naturally store job execution results for later retrieval up to the job's [TTL](#ttl---time-to-live).
 
 ## Project Status
 
@@ -44,6 +66,7 @@ Workq is currently suitable for development experimentation and evaluation.  Sta
 - [Clients](#clients)
 - [Caveats & Limitations](#caveats-&-limitations)
 - [Glossary](#glossary)
+	- [Priority](#priority)
 	- [TTR - Time-to-run](#ttr---time-to-run)
 	- [TTL - Time-to-live](#ttl---time-to-live)
 	- [Lease](#lease)
@@ -152,8 +175,8 @@ job := &workq.ScheduledJob{
 	TTR: 5000,                      // 5 second time-to-run limit
 	Payload: []byte("ping"),
 	Priority: 10,                   // @OPTIONAL Numeric priority, default 0.
-  MaxAttempts: 3,                 // @OPTIONAL Absolute max num of attempts.
-  MaxFails: 1,                    // @OPTIONAL Absolute max number of failures.
+	MaxAttempts: 3,                 // @OPTIONAL Absolute max num of attempts.
+	MaxFails: 1,                    // @OPTIONAL Absolute max number of failures.
 }
 err := client.Schedule(job)
 if err != nil {
@@ -207,7 +230,7 @@ if err != nil {
 
 [Protocol Doc](doc/protocol.md#result) | [Go Doc](https://godoc.org/github.com/iamduo/go-workq#Client.Result)
 
-Get a job result previously executed by [Run](#run-a-job-foreground) or [Schedule](#schedule-a-job) commands.
+Get a job result previously executed by [Add](#run-a-job-foreground) or [Schedule](#schedule-a-job) commands.
 
 ```go
 // Get a job result, waiting up to 60 seconds if the job is still executing.
@@ -240,6 +263,10 @@ Workq can't and will not do everything you want. Some things to keep in mind:
 * Workq servers are standalone and do not speak to each other.
 
 ## Glossary
+
+### Priority
+
+Priorities are numeric from 0 (default, and lowest) - 4,294,967,295 (highest, 2^32) and can control the order of job execution within a single job queue. Higher priorities are executed first.
 
 ### TTR - Time-to-run
 
