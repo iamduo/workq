@@ -16,7 +16,6 @@ const (
 	// Abritrary safetey boundary
 	MaxAttempts = 255
 	MaxFails    = 255
-	MaxPriority = 4294967295
 
 	// 24 hours in ms
 	MaxTTR = 86400000
@@ -43,7 +42,7 @@ type Job struct {
 	ID          ID
 	Name        string    // Unique name of job
 	Payload     []byte    // 1MB limit
-	Priority    uint32    // Priority from lowest to highest
+	Priority    int32     // Priority from lowest to highest
 	MaxAttempts uint8     // Num of allowed attempts
 	MaxFails    uint8     // Num of allowed failures
 	TTR         uint32    // time to run in ms
@@ -198,13 +197,13 @@ func MaxFailsFromBytes(b []byte) (uint8, error) {
 }
 
 // Return a valid priority from slice.
-// Valid priority is 2^32 - 1 and non-negative.
+// Valid priority is within int32.
 // Returns an error if out of range.
-func PriorityFromBytes(b []byte) (uint32, error) {
-	priority, err := strconv.ParseUint(string(b), 10, 32)
-	if err != nil || priority > MaxPriority {
+func PriorityFromBytes(b []byte) (int32, error) {
+	priority, err := strconv.ParseInt(string(b), 10, 32)
+	if err != nil {
 		return 0, ErrInvalidPriority
 	}
 
-	return uint32(priority), nil
+	return int32(priority), nil
 }

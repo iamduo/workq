@@ -638,7 +638,7 @@ func TestRunInvalidArgs(t *testing.T) {
 					[]byte("1"),
 					[]byte("a"),
 				},
-				prot.CmdFlags{"priority": []byte("-1")},
+				prot.CmdFlags{"priority": []byte("*")},
 			),
 			nil,
 			prot.NewClientErr(job.ErrInvalidPriority.Error()),

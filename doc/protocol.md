@@ -60,7 +60,7 @@ Enqueue a job by `name`.
 
 **Optional Flags**
 
-* `-priority` - Numeric priority from 0 (default level, lowest) - 4294967295 (2^32) (highest).
+* `-priority` - Numeric priority from -2147483648 (lowest) to 2147483647 (highest), default is 0.
 * `-max-attempts` - Max number of allowed attempts, default is "unlimited" up to the job's TTL. If a value is set, max is 255. An attempt is counted anytime a job is leased regardless of the outcome. This includes a job timing out due to TTR.
 * `-max-fails` - Max number of explicit job failures. Explicit job failures are not from timeouts, but from explicit workers reporting results by the [`fail`](#fail) command. Use this when you want a job to be retried on "true" worker failures.
 
@@ -732,7 +732,7 @@ All error responses start with `-` as the first character to signify an error ty
 
 ### Priority
 
-Priorities are numeric from 0 (default, and lowest) - 4,294,967,295 (highest, 2^32) and can control the order of job execution within a single job queue. Higher priorities are executed first.
+Priority is a signed 32-bit integer value from -2147483648 to 2147483647, 0 being the default. Controls the order of job execution within a single job queue. Higher priorities are executed first.
 
 ### TTR - Time-to-run
 

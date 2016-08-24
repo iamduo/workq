@@ -10,7 +10,7 @@ Workq runs as a standalone TCP server and implements a simple, text based protoc
 	* Submit a job and grab a result at a later time up to [TTL](#ttl---time-to-live).
 	* Submit a job and wait for the result synchronously ([Gearman](http://gearman.org) style).
 * Adhoc job scheduling at any future UTC time.
-* Numeric job priorities within 2^32, 0 being the default priority (lowest).
+* Numeric job priorities from -2147483648 to 2147483647.
 * Per job [TTR](#ttr---time-to-run) (time-to-run) - Limits max execution time in milliseconds for a single attempt until re-queue.
 * Per job [TTL](#ttl---time-to-live) expiration - Limits max job lifetime in milliseconds until automatic deletion.
 * Per job retry support with [max-attempts](#max-attempts) and [max-fails](#max-fails) flags.
@@ -35,7 +35,7 @@ Workq can enable concurrency especially in languages that do not have built-in c
 
 **Streamlining & Persistent Processing**
 
-Workq will retry jobs from [TTR](#ttr---time-to-run) (time-to-run) timeouts and/or from explicit job failures through the [max-attempts](#max-attempts) and [max-fails](#max-fails) flags. Retry is a job execution specification and does not require any custom worker logic. 
+Workq will retry jobs from [TTR](#ttr---time-to-run) (time-to-run) timeouts and/or from explicit job failures through the [max-attempts](#max-attempts) and [max-fails](#max-fails) flags. Retry is a job execution specification and does not require any custom worker logic.
 
 **Distributing Work**
 
@@ -266,7 +266,7 @@ Workq can't and will not do everything you want. Some things to keep in mind:
 
 ### Priority
 
-Priorities are numeric from 0 (default, and lowest) - 4,294,967,295 (highest, 2^32) and can control the order of job execution within a single job queue. Higher priorities are executed first.
+Priority is a signed 32-bit integer value from -2147483648 to 2147483647, 0 being the default. Controls the order of job execution within a single job queue. Higher priorities are executed first.
 
 ### TTR - Time-to-run
 

@@ -300,15 +300,16 @@ func TestMaxFailsFromBytes(t *testing.T) {
 func TestPriorityFromBytes(t *testing.T) {
 	tests := []struct {
 		b           []byte
-		expPriority uint32
+		expPriority int32
 		expErr      bool
 	}{
 		{[]byte("0"), 0, false},
 		{[]byte("1"), 1, false},
-		{[]byte("4294967295"), 4294967295, false},
+		{[]byte("-2147483648"), -2147483648, false},
+		{[]byte("2147483647"), 2147483647, false},
 
-		{[]byte("-1"), 0, true},
-		{[]byte("4294967296"), 0, true},
+		{[]byte("-2147483649"), 0, true},
+		{[]byte("2147483648"), 0, true},
 	}
 
 	for _, tt := range tests {
