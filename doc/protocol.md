@@ -233,7 +233,7 @@ Lease a job by name. Multiple job names can be specified and they will be proces
 
 **Special Considerations**
 
-* There is no *hang forever* mode, however you can simulate this with a long <wait-timeout>. It is recommended to not set a long <wait-timeout> to reduce any unexpected TCP (dead peer)[http://tldp.org/HOWTO/TCP-Keepalive-HOWTO/overview.html#checkdeadpeers] issues. In addition, a reasonable wait-timeout time allows the server to keep internals tidy.
+* There is no *hang forever* mode, however you can simulate this with a long <wait-timeout>. It is recommended to not set a long <wait-timeout> to reduce any unexpected TCP [dead peer](http://tldp.org/HOWTO/TCP-Keepalive-HOWTO/overview.html#checkdeadpeers) issues. In addition, a reasonable wait-timeout time allows the server to keep internals tidy.
 * A worker lease workflow can cross connections. A worker can lease under one connection and finish processing in another connection. This relaxed constraints allows for ease of operation, but it allows for possible worker processing races. For example, a worker can finish a job with `complete` or `fail` **after** a TTR timeout **AND** even after another worker has picked up the job.
 
 **Example**
@@ -736,7 +736,7 @@ Priorities are numeric from 0 (default, and lowest) - 4,294,967,295 (highest, 2^
 
 ### TTR - Time-to-run
 
-TTR stands for time-to-run and is the maximum time a job can run for after being [leased](#leasing-jobs) before it is requeued. This value is in milliseconds.
+TTR stands for time-to-run and is the maximum time a job can run for after being [leased](#lease) before it is requeued. This value is in milliseconds.
 
 ### TTL - Time-to-live
 
