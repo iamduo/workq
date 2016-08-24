@@ -69,7 +69,7 @@ func (h *RunHandler) Exec(cmd *prot.Cmd) ([]byte, error) {
 			rec.Mu.RLock()
 			// Job is not running during <wait-timeout>
 			// AOK to fully clean up
-			if !ok || !rec.Running() {
+			if !ok || (!rec.Running() && !rec.Processed()) {
 				rec.Mu.RUnlock()
 				timeoutRun()
 				return nil, prot.ErrTimedOut
