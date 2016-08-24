@@ -90,7 +90,7 @@ func (s *Server) Stop() error {
 
 func (s *Server) clientLoop(c *client.Client) {
 	atomic.AddUint64(&s.Usage.ActiveClients, 1)
-	defer atomic.AddUint64(&s.Usage.ActiveClients, ^uint64(1))
+	defer atomic.AddUint64(&s.Usage.ActiveClients, ^uint64(0))
 
 	rdr := c.Reader()
 	wrt := c.Writer()

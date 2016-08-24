@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -216,5 +217,60 @@ func TestHandlerSendReplyFailure(t *testing.T) {
 	_, err := c.Reader().ReadByte()
 	if err == nil {
 		t.Fatalf("Expected conn to be closed, err=%v", err)
+	}
+}
+
+func TestStartedUsage(t *testing.T) {
+	usage := &Usage{}
+	s := New(":8080", &CmdRouter{}, prot.Prot{}, usage)
+	started := time.Now().UTC()
+	serverListenAndServe(t, s)
+	defer serverStop(s)
+
+	diff := usage.Started.Sub(started)
+	if diff < 0 || diff > 1000*time.Millisecond {
+		t.Fatalf("Started time out of bounds, diff=%s", diff)
+	}
+}
+
+func TestActiveClientsUsage(t *testing.T) {
+	usage := &Usage{}
+	s := New(":8080", &CmdRouter{}, prot.Prot{}, usage)
+	serverListenAndServe(t, s)
+	defer serverStop(s)
+
+	var active uint64
+	active = atomic.LoadUint64(&usage.ActiveClients)
+	if active != 0 {
+		t.Fatalf("ActiveClients, exp=0, act=%d", active)
+	}
+
+	clients := make([]*testutil.Client, 2)
+	clients[0] = testutil.NewClient(t)
+	time.Sleep(1 * time.Millisecond)
+	active = atomic.LoadUint64(&usage.ActiveClients)
+	if active != 1 {
+		t.Fatalf("ActiveClients, exp=1, act=%d", active)
+	}
+
+	clients[1] = testutil.NewClient(t)
+	time.Sleep(1 * time.Millisecond)
+	active = atomic.LoadUint64(&usage.ActiveClients)
+	if active != 2 {
+		t.Fatalf("ActiveClients, exp=2, act=%d", active)
+	}
+
+	clients[1].Conn().Close()
+	time.Sleep(1 * time.Millisecond)
+	active = atomic.LoadUint64(&usage.ActiveClients)
+	if active != 1 {
+		t.Fatalf("ActiveClients, exp=1, act=%d", active)
+	}
+
+	clients[0].Conn().Close()
+	time.Sleep(1 * time.Millisecond)
+	active = atomic.LoadUint64(&usage.ActiveClients)
+	if active != 0 {
+		t.Fatalf("ActiveClients, exp=1, act=%d", active)
 	}
 }
