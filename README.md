@@ -27,7 +27,7 @@ Workq runs as a standalone TCP server and implements a simple, text based protoc
 
 Schedule adhoc one-time jobs at a future UTC time. Workq can be used as a timer for any application event scheduling. Compare this to the usual alternative of building scheduling schema into an existing datastore, writing a custom worker to poll the datastore, and finally building in locking & state management to manage dispatching.
 
-In Workq, you [schedule the job](#schedule-a-job), [lease the job](##leasing-jobs), and [complete the job](#completing-jobs).
+In Workq, you [schedule the job](#schedule-a-job), [lease the job](#leasing-jobs), and [complete the job](#completing-jobs).
 
 **Concurrency Control**
 
