@@ -248,7 +248,13 @@ Please see the full [protocol doc](doc/protocol.md) and [Go client docs](https:/
 
 ## Clients
 
-* [Go](https://github.com/iamduo/workq)
+### Go
+
+* [go-workq](https://github.com/iamduo/go-workq)
+
+### Java
+
+* [workq-java](https://github.com/phybros/workq-java)
 
 ### Developing New Clients
 
