@@ -3,17 +3,18 @@ package job
 import (
 	"errors"
 	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/satori/go.uuid"
 )
 
 const (
+	MaxName = 255
+
 	// 1 MiB = 1,024 KiB = 1,048,576 bytes
 	MaxPayload = 1048576
 	MaxResult  = 1048576
-	// Abritrary safetey boundary
+
 	MaxAttempts = 255
 	MaxFails    = 255
 
@@ -23,19 +24,23 @@ const (
 	MaxTTL          = 2592000000
 	MaxHardAttempts = 255
 	TimeFormat      = "2006-01-02T15:04:05Z"
+
+	// Max timeout for wait related cmds (lease).
+	MaxTimeout = 86400000
 )
 
 var (
-	ErrInvalidID          = errors.New("Invalid Job ID")
-	ErrInvalidName        = errors.New("Invalid Job Name")
-	ErrInvalidPayload     = errors.New("Invalid Job Payload")
-	ErrInvalidResult      = errors.New("Invalid Job Result")
-	ErrInvalidMaxAttempts = errors.New("Invalid Job Max Attempts")
-	ErrInvalidMaxFails    = errors.New("Invalid Job Max Fails")
-	ErrInvalidPriority    = errors.New("Invalid Job Priority")
-	ErrInvalidTTR         = errors.New("Invalid Job TTR")
-	ErrInvalidTTL         = errors.New("Invalid Job TTL")
-	ErrInvalidTime        = errors.New("Invalid Job Time")
+	ErrInvalidID          = errors.New("Invalid ID")
+	ErrInvalidName        = errors.New("Invalid Name")
+	ErrInvalidPayload     = errors.New("Invalid Payload")
+	ErrInvalidResult      = errors.New("Invalid Result")
+	ErrInvalidMaxAttempts = errors.New("Invalid Max Attempts")
+	ErrInvalidMaxFails    = errors.New("Invalid Max Fails")
+	ErrInvalidPriority    = errors.New("Invalid Priority")
+	ErrInvalidTTR         = errors.New("Invalid TTR")
+	ErrInvalidTTL         = errors.New("Invalid TTL")
+	ErrInvalidTime        = errors.New("Invalid Time")
+	ErrInvalidTimeout     = errors.New("Invalid Timeout")
 )
 
 type Job struct {
@@ -56,6 +61,15 @@ func NewEmptyJob() *Job {
 	return &Job{Created: time.Now().UTC()}
 }
 
+func (j *Job) Expiration() time.Time {
+	dur := time.Duration(j.TTL) * time.Millisecond
+	if !j.Time.Equal(time.Time{}) {
+		return j.Time.Add(dur)
+	}
+
+	return j.Created.Add(dur)
+}
+
 // 16 byte UUIDv4
 type ID [16]byte // UUIDv4
 
@@ -66,144 +80,73 @@ func (id ID) String() string {
 	return u.String()
 }
 
-// Returns an ID from a UUIDv4 byte slice
-// Returns an error if input is not a valid UUIDv4
-func IDFromBytes(b []byte) (ID, error) {
-	s := string(b)
-	id, err := uuid.FromString(s)
-	if err != nil {
-		return ID{}, ErrInvalidID
+func ValidateID(id ID) error {
+	u := uuid.UUID(id)
+	if u != uuid.Nil && u.Version() == 4 && u.Variant() == uuid.VariantRFC4122 {
+		return nil
 	}
 
-	jid := ID(id)
-	return jid, nil
+	return ErrInvalidID
 }
 
 var nameRe = regexp.MustCompile("^[a-zA-Z0-9_.-]*$")
 
-// Return a name string from byte slice
-// Returns an error if name is not alphanumeric + special chars: "_", ".", "-"
-func NameFromBytes(b []byte) (string, error) {
-	name := string(b)
+func ValidateName(name string) error {
 	l := len(name)
-	if l > 0 && l <= 128 && nameRe.MatchString(name) {
-		return name, nil
+	if l == 0 || l > MaxName || !nameRe.MatchString(name) {
+		return ErrInvalidName
 	}
 
-	return "", ErrInvalidName
+	return nil
 }
 
-// Return a valid payload slice from a size and payload slice
-// Returns an error if size does not match actual payload size
-// or if payload exceeds max size.
-func PayloadFromBytes(size []byte, payload []byte) ([]byte, error) {
-	assertSize, err := strconv.Atoi(string(size))
-	if err != nil {
-		return nil, ErrInvalidPayload
+func ValidatePayload(p []byte) error {
+	if len(p) > MaxPayload {
+		return ErrInvalidPayload
 	}
 
-	actSize := len(payload)
-	if assertSize != actSize || actSize > MaxPayload {
-		return nil, ErrInvalidPayload
-	}
-
-	return payload, nil
+	return nil
 }
 
-// Return a valid result from a size and result slice
-// Returns an error if size does no match actual result size
-// or if result exceeds max size
-func ResultFromBytes(size []byte, result []byte) ([]byte, error) {
-	assertSize, err := strconv.Atoi(string(size))
-	if err != nil {
-		return nil, ErrInvalidResult
+func ValidateResult(r []byte) error {
+	if len(r) > MaxResult {
+		return ErrInvalidResult
 	}
 
-	actSize := len(result)
-	if assertSize != actSize || actSize > MaxResult {
-		return nil, ErrInvalidResult
-	}
-
-	return result, nil
+	return nil
 }
 
-// Return a valid TTR from slice.
-// A valid TTR is 2^32 - 1 and non-negative.
-// Returns an error if TTR is out of range.
-func TTRFromBytes(b []byte) (uint32, error) {
-	ttr, err := strconv.ParseUint(string(b), 10, 32)
-	if err != nil || ttr > MaxTTR {
-		return 0, ErrInvalidTTR
+// A valid TTR is 2^32 - 1, non zero, and non-negative.
+func ValidateTTR(ttr uint32) error {
+	if ttr == 0 || ttr > MaxTTR {
+		return ErrInvalidTTR
 	}
 
-	return uint32(ttr), nil
+	return nil
 }
 
-// Return a valid TTL from slice
-// Valid TTL is 2^64 - 1 and non non-negative
-// Returns an error if TTL is out of range
-func TTLFromBytes(b []byte) (uint64, error) {
-	ttl, err := strconv.ParseUint(string(b), 10, 64)
-	if err != nil || ttl > MaxTTL {
-		return 0, ErrInvalidTTL
+// Valid TTL is 2^64 - 1, non zero, and non-negative.
+func ValidateTTL(ttl uint64) error {
+	if ttl == 0 || ttl > MaxTTL {
+		return ErrInvalidTTL
 	}
 
-	return ttl, nil
+	return nil
 }
 
-// Return a valid scheduled time from slice.
-// Valid time format is set in const TimeFormat and is UTC.
-// Only legal if scheduled time is in the future.
-func TimeFromBytes(b []byte) (time.Time, error) {
-	t, err := time.Parse(TimeFormat, string(b))
-	if err != nil {
-		return time.Time{}, ErrInvalidTime
+// Valid time is in UTC, and greater or equal to current time.
+func ValidateTime(t time.Time) error {
+	if time.Now().After(t) {
+		return ErrInvalidTime
 	}
 
-	return t, err
+	return nil
 }
 
-func IsTimeRelevant(t time.Time) bool {
-	dur := t.Sub(time.Now().UTC())
-	if dur.Seconds() >= 0 {
-		return true
+func ValidateTimeout(t uint32) error {
+	if t > MaxTimeout {
+		return ErrInvalidTimeout
 	}
 
-	return false
-}
-
-// Return a valid max attempt from slice.
-// Valid max attempt is 0-255.
-// Returns an error if out of range.
-func MaxAttemptsFromBytes(b []byte) (uint8, error) {
-	attempts, err := strconv.ParseUint(string(b), 10, 8)
-	if err != nil || attempts <= 0 || attempts > MaxAttempts {
-		return 0, ErrInvalidMaxAttempts
-	}
-
-	return uint8(attempts), nil
-}
-
-// Return a valid max fails from slice.
-// Valid max fails is 0-255.
-// Returns an error if out of range.
-func MaxFailsFromBytes(b []byte) (uint8, error) {
-	fails, err := strconv.ParseUint(string(b), 10, 8)
-	if err != nil || fails <= 0 || fails > MaxFails {
-		return 0, ErrInvalidMaxFails
-	}
-
-	return uint8(fails), nil
-}
-
-// Return a valid priority from slice.
-// Valid priority is within int32.
-// Returns an error if out of range.
-func PriorityFromBytes(b []byte) (int32, error) {
-	priority, err := strconv.ParseInt(string(b), 10, 32)
-	if err != nil {
-		return 0, ErrInvalidPriority
-	}
-
-	return int32(priority), nil
+	return nil
 }

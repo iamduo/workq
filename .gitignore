@@ -1,2 +1,4 @@
+cmd/workq-server/systests/tmp/*
 vendor/*
 bin/*
+int/captain/test/*/*.lock

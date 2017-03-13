@@ -17,12 +17,16 @@ import (
 // Changing quickly to adapt to test needs.
 // FYI, There will be a replacement to this at a later time.
 
-func GenId() string {
+func GenID() uuid.UUID {
+	return uuid.NewV4()
+}
+
+func GenIDString() string {
 	return uuid.NewV4().String()
 }
 
 func GenName() string {
-	return fmt.Sprintf("hi-%s", GenId())
+	return fmt.Sprintf("hi-%s", GenID())
 }
 
 func StartServer() *exec.Cmd {

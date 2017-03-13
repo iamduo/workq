@@ -59,16 +59,18 @@ func (r *Registry) Add(rec *RunRecord) bool {
 func (r *Registry) Delete(id ID) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	val, ok := r.all[id]
+	rec, ok := r.all[id]
 	if !ok {
 		return false
 	}
 
-	for _, timer := range val.Timers {
+	rec.Mu.RLock()
+	for _, timer := range rec.Timers {
 		if timer != nil {
 			timer.Cancel()
 		}
 	}
+	rec.Mu.RUnlock()
 
 	delete(r.all, id)
 	return true
@@ -130,6 +132,7 @@ func (r *RunRecord) Processed() bool {
 }
 
 // Records a job result and sends result over the "wait" channel.
+// Requires locking.
 // Returns false if result has already been written.
 func (r *RunRecord) WriteResult(result Result, success bool) bool {
 	if r.Result != nil {
@@ -137,22 +140,22 @@ func (r *RunRecord) WriteResult(result Result, success bool) bool {
 	}
 
 	r.Result = result
-	waitResult := &WaitResult{Result: result, Success: success}
+	waitResult := &RunResult{Result: result, Success: success}
 	r.Wait <- waitResult
 	return true
 }
 
 type Result []byte
 
-// WaitResult is sent over the Wait channel.
+// RunResult is sent over the Wait channel.
 // Allows readers to wait for a result and determine the success.
-type WaitResult struct {
+type RunResult struct {
 	Success bool
 	Result  Result
 }
 
 // Wait channel for active connected readers.
-type Wait chan *WaitResult
+type Wait chan *RunResult
 
 // Timer container encapsulates the original time.Timer with support for
 // Cancellation.
