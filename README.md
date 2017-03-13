@@ -1,4 +1,4 @@
-# Workq [![Build Status](https://travis-ci.org/iamduo/workq.svg?branch=master)](https://travis-ci.org/iamduo/workq) ![Project Status](https://img.shields.io/badge/status-alpha-yellow.svg)
+# Workq [![Build Status](https://travis-ci.org/iamduo/workq.svg?branch=master)](https://travis-ci.org/iamduo/workq) [![Coverage Status](https://coveralls.io/repos/github/iamduo/workq/badge.svg?branch=master)](https://coveralls.io/github/iamduo/workq?branch=master) ![Project Status](https://img.shields.io/badge/status-alpha-yellow.svg)
 
 Workq is a job scheduling server strictly focused on simplifying job processing and streamlining coordination. It can run jobs in blocking foreground or non-blocking background mode.
 
@@ -6,7 +6,7 @@ Workq runs as a standalone TCP server and implements a simple, text based protoc
 
 ## Supported Features
 
-* Asyncronous and Syncronous processing
+* Asynchronous and Synchronous processing
 	* Submit a job and grab a result at a later time up to [TTL](#ttl---time-to-live).
 	* Submit a job and wait for the result synchronously ([Gearman](http://gearman.org) style).
 * Adhoc job scheduling at any future UTC time.
@@ -14,12 +14,7 @@ Workq runs as a standalone TCP server and implements a simple, text based protoc
 * Per job [TTR](#ttr---time-to-run) (time-to-run) - Limits max execution time in milliseconds for a single attempt until re-queue.
 * Per job [TTL](#ttl---time-to-live) expiration - Limits max job lifetime in milliseconds until automatic deletion.
 * Per job retry support with [max-attempts](#max-attempts) and [max-fails](#max-fails) flags.
-
-### Roadmapped
-
-- [ ] Command Log (Data Persistence).
-- [ ] Performance Benchmarks
-
+* In-memory with a persistent [Command Log](#command-log-persistence).
 
 ## What is Workq useful for?
 
@@ -63,6 +58,7 @@ Workq is currently suitable for development experimentation and evaluation.  Sta
 	- [Failing Jobs](#failing-jobs)
 	- [Retrieving Job Results](#retrieving-job-results)
 	- [And More](#and-more)
+- [Command Log Persistence](#command-log-persistence)
 - [Clients](#clients)
 - [Caveats & Limitations](#caveats-&-limitations)
 - [Glossary](#glossary)
@@ -94,11 +90,19 @@ make server
 
 ### Starting
 
+Start an **in-memory only** workq-server on port 9922.
+
 ```
 bin/workq-server
 ```
 
-Starts a workq-server on port 9922.
+Workq can be started with persistence by passing the `cmdlog-path` option with the path to a directory where the persistent logs will be stored.
+
+```
+bin/workq-server --cmdlog-path /path/to/workq/cmdlog-dir
+```
+
+Please refer to the full [Command Log Doc](doc/cmdlog.md) for details.
 
 ### Connecting
 
@@ -246,6 +250,12 @@ fmt.Printf("Success: %t, Result: %s", result.Success, result.Result)
 
 Please see the full [protocol doc](doc/protocol.md) and [Go client docs](https://github.com/iamduo/go-workq) for more details.
 
+## Command Log Persistence
+
+Persistence in Workq is handled by the [Command Log](doc/cmdlog.md), an append-only data log of all job commands that perform state changes.
+
+Please refer to the full [Command Log Doc](doc/cmdlog.md) for details.
+
 ## Clients
 
 ### Go
@@ -258,13 +268,13 @@ Please see the full [protocol doc](doc/protocol.md) and [Go client docs](https:/
 
 ### Developing New Clients
 
-While there is no official client development guide yet, developing a Workq client is fairly straightforward simply by reading the [protocol doc](doc/protocol.md). In addition, you can review the [Go client](https://github.com/iamduo/workq) as a working example. If you have questions, please join our [mailing list](https://groups.google.com/d/forum/workq).
+While there is no official client development guide yet, developing a Workq client is fairly straightforward simply by reading the [protocol doc](doc/protocol.md). In addition, you can review the [Go client](https://github.com/iamduo/workq) as a working example. If you have questions, please open a Github issue with the "question" label.
 
 ## Caveats & Limitations
 
 Workq can't and will not do everything you want. Some things to keep in mind:
 
-* In-memory only *for now*, disk backed durability is on the roadmap.
+* In-memory job server limited to RAM size (persistent on disk with [cmdlog](doc/cmdlog.md)).
 * Job payload & results are limited to 1 MiB each.
 * Workq servers are standalone and do not speak to each other.
 

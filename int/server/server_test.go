@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -47,28 +46,36 @@ func (p *TestProt) SendErr(w io.Writer, errStr string) error {
 	return p.sendErr(w, errStr)
 }
 
-func serverListenAndServe(t *testing.T, s *Server) {
-	go func() {
-		err := s.ListenAndServe()
-		if err != nil {
-			t.Fatalf("Unexpected server err=%v", err)
-		}
-	}()
+func serverListenAndServe(t *testing.T, s *Server, stop chan struct{}) {
+	start := func() {
+		ch := make(chan error)
+		go func() {
+			ch <- s.ListenAndServe()
+		}()
 
-	time.Sleep(1 * time.Millisecond)
-}
-func serverStop(s *Server) {
-	s.Stop()
-	time.Sleep(1 * time.Millisecond)
+		select {
+		case err := <-ch:
+			if err != nil {
+				t.Fatalf("Unexpected server err=%v", err)
+			}
+		case <-stop:
+			s.Stop()
+			return
+		}
+	}
+
+	go start()
+	time.Sleep(10 * time.Millisecond)
 }
 
 func TestWithCmd(t *testing.T) {
 	handlers := make(map[string]Handler)
 	handlers["lease"] = &TestHandler{b: []byte("OK\r\n"), err: nil}
 	router := &CmdRouter{Handlers: handlers}
-	s := New(":8080", router, prot.Prot{}, &Usage{})
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+	s := New(":8080", router, prot.Prot{})
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
 	c := testutil.NewClient(t)
 	c.Exec([]byte("lease 123 1\r\n"), []byte("+OK\r\n"))
@@ -78,18 +85,19 @@ func TestUnknownCmd(t *testing.T) {
 	handlers := make(map[string]Handler)
 	handlers["unknown-lease"] = &TestHandler{b: []byte("OK\r\n"), err: nil}
 	router := &CmdRouter{Handlers: handlers}
-	s := New(":8080", router, prot.Prot{}, &Usage{})
-	serverListenAndServe(t, s)
+	s := New(":8080", router, prot.Prot{})
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
 	c := testutil.NewClient(t)
 	c.Exec([]byte("unknown-lease 123 1\r\n"), []byte("-CLIENT-ERROR Unknown command\r\n"))
-	serverStop(s)
 }
 
 func TestInvalidAddr(t *testing.T) {
 	handlers := make(map[string]Handler)
 	router := &CmdRouter{Handlers: handlers}
-	s := New(":80808080", router, prot.Prot{}, &Usage{})
+	s := New(":80808080", router, prot.Prot{})
 	err := s.ListenAndServe()
 	if err == nil {
 		t.Fatalf("Start expected to fail")
@@ -100,9 +108,10 @@ func TestCmdErr(t *testing.T) {
 	handlers := make(map[string]Handler)
 	handlers["lease"] = &TestHandler{b: nil, err: errors.New("CLIENT-ERROR\r\n")}
 	router := &CmdRouter{Handlers: handlers}
-	s := New(":8080", router, prot.Prot{}, &Usage{})
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+	s := New(":8080", router, prot.Prot{})
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
 	c := testutil.NewClient(t)
 	c.Exec([]byte("lease 123 1\r\n"), []byte("-CLIENT-ERROR\r\n"))
@@ -124,9 +133,10 @@ func TestDisconnect(t *testing.T) {
 			return nil
 		},
 	}
-	s := New(":8080", router, p, &Usage{})
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+	s := New(":8080", router, p)
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
 	c := testutil.NewClient(t)
 	c.Conn().Write([]byte("\r\n"))
@@ -152,9 +162,10 @@ func TestParseCmdSendErrFailure(t *testing.T) {
 			return errors.New("Unable to write")
 		},
 	}
-	s := New(":8080", router, p, &Usage{})
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+	s := New(":8080", router, p)
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
 	c := testutil.NewClient(t)
 	c.Conn().Write([]byte("\r\n"))
@@ -180,9 +191,10 @@ func TestHandlerSendErrFailure(t *testing.T) {
 			return errors.New("Unable to write")
 		},
 	}
-	s := New(":8080", router, p, &Usage{})
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+	s := New(":8080", router, p)
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
 	c := testutil.NewClient(t)
 	c.Conn().Write([]byte("lease\r\n"))
@@ -208,9 +220,10 @@ func TestHandlerSendReplyFailure(t *testing.T) {
 			return nil
 		},
 	}
-	s := New(":8080", router, p, &Usage{})
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+	s := New(":8080", router, p)
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
 	c := testutil.NewClient(t)
 	c.Conn().Write([]byte("lease\r\n"))
@@ -220,57 +233,61 @@ func TestHandlerSendReplyFailure(t *testing.T) {
 	}
 }
 
-func TestStartedUsage(t *testing.T) {
-	usage := &Usage{}
-	s := New(":8080", &CmdRouter{}, prot.Prot{}, usage)
+func TestStartedStat(t *testing.T) {
+	s := New(":8080", &CmdRouter{}, prot.Prot{})
 	started := time.Now().UTC()
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
-	diff := usage.Started.Sub(started)
+	stats := s.Stats()
+	diff := stats.Started.Sub(started)
 	if diff < 0 || diff > 1000*time.Millisecond {
 		t.Fatalf("Started time out of bounds, diff=%s", diff)
 	}
 }
 
-func TestActiveClientsUsage(t *testing.T) {
-	usage := &Usage{}
-	s := New(":8080", &CmdRouter{}, prot.Prot{}, usage)
-	serverListenAndServe(t, s)
-	defer serverStop(s)
+func TestActiveClientsStat(t *testing.T) {
+	s := New(":8080", &CmdRouter{}, prot.Prot{})
+	stop := make(chan struct{})
+	serverListenAndServe(t, s, stop)
+	defer close(stop)
 
-	var active uint64
-	active = atomic.LoadUint64(&usage.ActiveClients)
-	if active != 0 {
-		t.Fatalf("ActiveClients, exp=0, act=%d", active)
+	stats := s.Stats()
+	if stats.ActiveClients != 0 {
+		t.Fatalf("ActiveClients, exp=0, act=%d", stats.ActiveClients)
 	}
 
 	clients := make([]*testutil.Client, 2)
 	clients[0] = testutil.NewClient(t)
 	time.Sleep(1 * time.Millisecond)
-	active = atomic.LoadUint64(&usage.ActiveClients)
-	if active != 1 {
-		t.Fatalf("ActiveClients, exp=1, act=%d", active)
+
+	stats = s.Stats()
+	if stats.ActiveClients != 1 {
+		t.Fatalf("ActiveClients, exp=1, act=%d", stats.ActiveClients)
 	}
 
 	clients[1] = testutil.NewClient(t)
 	time.Sleep(1 * time.Millisecond)
-	active = atomic.LoadUint64(&usage.ActiveClients)
-	if active != 2 {
-		t.Fatalf("ActiveClients, exp=2, act=%d", active)
+
+	stats = s.Stats()
+	if stats.ActiveClients != 2 {
+		t.Fatalf("ActiveClients, exp=2, act=%d", stats.ActiveClients)
 	}
 
 	clients[1].Conn().Close()
 	time.Sleep(1 * time.Millisecond)
-	active = atomic.LoadUint64(&usage.ActiveClients)
-	if active != 1 {
-		t.Fatalf("ActiveClients, exp=1, act=%d", active)
+
+	stats = s.Stats()
+	if stats.ActiveClients != 1 {
+		t.Fatalf("ActiveClients, exp=1, act=%d", stats.ActiveClients)
 	}
 
 	clients[0].Conn().Close()
 	time.Sleep(1 * time.Millisecond)
-	active = atomic.LoadUint64(&usage.ActiveClients)
-	if active != 0 {
-		t.Fatalf("ActiveClients, exp=1, act=%d", active)
+
+	stats = s.Stats()
+	if stats.ActiveClients != 0 {
+		t.Fatalf("ActiveClients, exp=1, act=%d", stats.ActiveClients)
 	}
 }

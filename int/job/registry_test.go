@@ -22,7 +22,7 @@ func TestRegistry(t *testing.T) {
 	}
 
 	j := NewEmptyJob()
-	j.ID, _ = IDFromBytes([]byte(testutil.GenId()))
+	j.ID = ID(testutil.GenID())
 	rec.Job = j
 
 	if !reg.Add(rec) {

@@ -5,36 +5,29 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/iamduo/go-workq"
+	"github.com/iamduo/workq/int/testutil"
 )
-
-var serverPath string
-var serverAddr = "localhost:9944"
-
-func init() {
-	serverPath, _ = filepath.Abs("./tmp/workq-server")
-}
 
 func TestSmoke(t *testing.T) {
 	buildServer()
-	process := startServer()
+	process := startSmokeServer()
 
-	client, err := workq.Connect(serverAddr)
+	client, err := workq.Connect(serverAddr())
 	if err != nil {
 		t.Fatalf("Connect err=%s", err)
 	}
 
 	t.Run("Run,Lease,Complete", func(t *testing.T) {
-		expID := "6ba7b810-9dad-11d1-80b4-00c04fd430c5"
+		expID := testutil.GenIDString()
 		expResult := []byte("Pong!")
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
-			client, err := workq.Connect(serverAddr)
+			client, err := workq.Connect(serverAddr())
 			if err != nil {
 				t.Fatalf("Connect err=%s", err)
 			}
@@ -48,13 +41,12 @@ func TestSmoke(t *testing.T) {
 				t.Fatalf("Job ID mismatch")
 			}
 
-			err = client.Complete(expID, expResult)
-			if err != nil {
+			if err = client.Complete(expID, expResult); err != nil {
 				t.Fatalf("Unable to complete, err=%q", err)
 			}
 		}()
 		job := &workq.FgJob{
-			ID:       "6ba7b810-9dad-11d1-80b4-00c04fd430c5",
+			ID:       expID,
 			Name:     "ping-run",
 			TTR:      5000,
 			Timeout:  60000,
@@ -73,7 +65,7 @@ func TestSmoke(t *testing.T) {
 	})
 
 	t.Run("Schedule,Lease", func(t *testing.T) {
-		expID := "6ba7b810-9dad-11d1-80b4-00c04fd430c6"
+		expID := testutil.GenIDString()
 		j := &workq.ScheduledJob{
 			ID:          expID,
 			Name:        "ping-schedule",
@@ -91,7 +83,7 @@ func TestSmoke(t *testing.T) {
 		}
 
 		_, err = client.Lease([]string{"ping-schedule"}, 100)
-		if err == nil || err.Error() != "TIMED-OUT" {
+		if err == nil || err.Error() != "TIMEOUT" {
 			t.Fatalf("Lease mismatch, err=%q", err)
 		}
 
@@ -106,13 +98,14 @@ func TestSmoke(t *testing.T) {
 	})
 
 	t.Run("Add,Complete,Result", func(t *testing.T) {
-		result, err := client.Result("6ba7b810-9dad-11d1-80b4-00c04fd430c7", 1000)
+		expID := testutil.GenIDString()
+		result, err := client.Result(expID, 1000)
 		if result != nil || err == nil || err.Error() != "NOT-FOUND" {
 			t.Fatalf("Result mismatch, result=%+v, err=%s", result, err)
 		}
 
 		job := &workq.BgJob{
-			ID:          "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			ID:          expID,
 			Name:        "ping",
 			TTR:         5000,  // 5 second time-to-run limit
 			TTL:         60000, // Expire after 60 seconds
@@ -121,18 +114,16 @@ func TestSmoke(t *testing.T) {
 			MaxAttempts: 3,  // @OPTIONAL Absolute max num of attempts.
 			MaxFails:    1,  // @OPTIONAL Absolute max number of failures.
 		}
-		err = client.Add(job)
-		if err != nil {
+		if err = client.Add(job); err != nil {
 			t.Fatalf("Unable to add job, err=%s", err)
 		}
 
 		expResult := []byte("Pong!")
-		err = client.Complete("6ba7b810-9dad-11d1-80b4-00c04fd430c8", expResult)
-		if err != nil {
+		if err = client.Complete(expID, expResult); err != nil {
 			t.Fatalf("Unable to complete job, err=%s", err)
 		}
 
-		result, err = client.Result("6ba7b810-9dad-11d1-80b4-00c04fd430c8", 1000)
+		result, err = client.Result(expID, 1000)
 		if err != nil {
 			t.Fatalf("Result mismatch, err=%s", err)
 		}
@@ -144,12 +135,12 @@ func TestSmoke(t *testing.T) {
 
 	t.Run("Add,Lease", func(t *testing.T) {
 		_, err := client.Lease([]string{"ping1", "ping2", "ping3"}, 100)
-		if err == nil || err.Error() != "TIMED-OUT" {
+		if err == nil || err.Error() != "TIMEOUT" {
 			t.Fatalf("Unable to lease job, err=%s", err)
 		}
 
 		j := &workq.BgJob{
-			ID:          "6ba7b810-9dad-11d1-80b4-00c04fd430c9",
+			ID:          testutil.GenIDString(),
 			Name:        "ping1",
 			TTR:         5000,
 			TTL:         60000,
@@ -158,8 +149,7 @@ func TestSmoke(t *testing.T) {
 			MaxAttempts: 3,
 			MaxFails:    1,
 		}
-		err = client.Add(j)
-		if err != nil {
+		if err = client.Add(j); err != nil {
 			t.Fatalf("Unable to add job, err=%s", err)
 		}
 
@@ -171,7 +161,7 @@ func TestSmoke(t *testing.T) {
 
 	t.Run("Add,Fail,Result", func(t *testing.T) {
 		j := &workq.BgJob{
-			ID:          "6ba7b810-9dad-11d1-80b4-00c04fd430d1",
+			ID:          testutil.GenIDString(),
 			Name:        "ping",
 			TTR:         5000,
 			TTL:         60000,
@@ -186,12 +176,11 @@ func TestSmoke(t *testing.T) {
 		}
 
 		expResult := []byte("Failed-Pong!")
-		err = client.Fail("6ba7b810-9dad-11d1-80b4-00c04fd430d1", expResult)
-		if err != nil {
+		if err = client.Fail(j.ID, expResult); err != nil {
 			t.Fatalf("Unable to fail job, err=%q", err)
 		}
 
-		result, err := client.Result("6ba7b810-9dad-11d1-80b4-00c04fd430d1", 1000)
+		result, err := client.Result(j.ID, 1000)
 		if err != nil {
 			t.Fatalf("Result mismatch, err=%s", err)
 		}
@@ -203,7 +192,7 @@ func TestSmoke(t *testing.T) {
 
 	t.Run("Add,Delete", func(t *testing.T) {
 		j := &workq.BgJob{
-			ID:          "6ba7b810-9dad-11d1-80b4-00c04fd430d2",
+			ID:          testutil.GenIDString(),
 			Name:        "ping",
 			TTR:         5000,
 			TTL:         60000,
@@ -217,8 +206,7 @@ func TestSmoke(t *testing.T) {
 			t.Fatalf("Unable to add job, err=%s", err)
 		}
 
-		err = client.Delete("6ba7b810-9dad-11d1-80b4-00c04fd430d2")
-		if err != nil {
+		if err = client.Delete(j.ID); err != nil {
 			t.Fatalf("Unable to delete")
 		}
 	})
@@ -226,20 +214,8 @@ func TestSmoke(t *testing.T) {
 	process.Kill()
 }
 
-func buildServer() {
-	sourcePath, _ := filepath.Abs("../*.go")
-	buildStr := fmt.Sprintf("env go build -o %s %s", serverPath, sourcePath)
-	// sh -c workaround for now, unknown escaping issues with standard Command("go", ...)
-	fmt.Printf("%s", buildStr)
-	cmd := exec.Command("sh", "-c", buildStr)
-	err := cmd.Run()
-	if err != nil {
-		panic(fmt.Sprintf("Unable to build server, err=%s", err))
-	}
-}
-
-func startServer() *os.Process {
-	cmd := exec.Command(serverPath, "-listen", serverAddr)
+func startSmokeServer() *os.Process {
+	cmd := exec.Command(serverPath(), "-listen", serverAddr())
 	err := cmd.Start()
 	if err != nil {
 		panic(fmt.Sprintf("Unable to start test server, err=%s", err))

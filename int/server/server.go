@@ -2,7 +2,7 @@ package server
 
 import (
 	"net"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/iamduo/workq/int/client"
@@ -38,21 +38,22 @@ func (c *CmdRouter) Handler(cmd string) Handler {
 // Workq Server listens on a TCP Address
 // Requires a Command Router and a Protocol Implementation
 type Server struct {
-	Addr   string // Network Address to listen on
-	Router Router
-	Prot   prot.Interface
-	Usage  *Usage
-	ln     net.Listener
-	stop   chan struct{}
+	Addr     string // Network Address to listen on
+	Router   Router
+	Prot     prot.Interface
+	ln       net.Listener
+	mu       sync.Mutex
+	stop     chan struct{}
+	stats    Stats
+	statlock sync.RWMutex
 }
 
-// New returns a initialized, but unstarted  Server
-func New(addr string, router Router, protocol prot.Interface, usage *Usage) *Server {
+// New returns a initialized, but unstarted Server
+func New(addr string, router Router, protocol prot.Interface) *Server {
 	return &Server{
 		Addr:   addr,
 		Router: router,
 		Prot:   protocol,
-		Usage:  usage,
 		stop:   make(chan struct{}, 1),
 	}
 }
@@ -60,11 +61,16 @@ func New(addr string, router Router, protocol prot.Interface, usage *Usage) *Ser
 // Start a Workq Server, listening on the specified TCP address
 func (s *Server) ListenAndServe() error {
 	var err error
+	s.mu.Lock()
 	s.ln, err = net.Listen("tcp", s.Addr)
+	s.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	s.Usage.Started = time.Now().UTC()
+
+	s.statlock.Lock()
+	s.stats.Started = time.Now().UTC()
+	s.statlock.Unlock()
 
 	for {
 		select {
@@ -73,24 +79,46 @@ func (s *Server) ListenAndServe() error {
 		default:
 			conn, err := s.ln.Accept()
 			if err != nil {
-				continue
+				break
 			}
-			// TODO: check for Accept errors
-			c := client.New(conn.(*net.TCPConn), prot.MaxRead)
-			go s.clientLoop(c)
+
+			go func() {
+				s.clientLoop(client.New(conn.(*net.TCPConn), prot.MaxRead))
+			}()
 		}
 	}
 }
 
 // Stops listening while maintaining all active connections
 func (s *Server) Stop() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.stop <- struct{}{}
-	return s.ln.Close()
+	if s.ln != nil {
+		return s.ln.Close()
+	}
+
+	return nil
+}
+
+// Stats returns stats for the server at the current time.
+func (s *Server) Stats() Stats {
+	s.statlock.RLock()
+	defer s.statlock.RUnlock()
+	return s.stats
 }
 
 func (s *Server) clientLoop(c *client.Client) {
-	atomic.AddUint64(&s.Usage.ActiveClients, 1)
-	defer atomic.AddUint64(&s.Usage.ActiveClients, ^uint64(0))
+	s.statlock.Lock()
+	s.stats.ActiveClients++
+	s.statlock.Unlock()
+
+	defer func() {
+		s.statlock.Lock()
+		s.stats.ActiveClients--
+		s.statlock.Unlock()
+	}()
 
 	rdr := c.Reader()
 	wrt := c.Writer()
@@ -134,8 +162,11 @@ func (s *Server) clientLoop(c *client.Client) {
 	}
 }
 
-// Usage data
-type Usage struct {
+// Stats Data
+type Stats struct {
+	// Number of active clients current connected.
 	ActiveClients uint64
-	Started       time.Time
+
+	// Started represents the time immediately after the server starts listening.
+	Started time.Time
 }

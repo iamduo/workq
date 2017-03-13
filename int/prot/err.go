@@ -2,7 +2,7 @@ package prot
 
 var (
 	ErrNotFound   = NewError("NOT-FOUND", "")
-	ErrTimedOut   = NewError("TIMED-OUT", "")
+	ErrTimeout    = NewError("TIMEOUT", "")
 	ErrUnknownCmd = NewClientErr("Unknown command")
 )
 

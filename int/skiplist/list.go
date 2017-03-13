@@ -23,8 +23,6 @@ var (
 	ErrDuplicate = errors.New("Duplicate")
 )
 
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 // Compare func interface
 // Allows for users of Skiplist to define sort strategy for skiplists
 // Value "a" is the base subject of the comparison or the "left" side.
@@ -40,6 +38,7 @@ type List struct {
 	len     int     // Len of all items
 	head    *Node   // Head of list
 	compare Compare // Comparison func
+	rand    *rand.Rand
 	mu      sync.RWMutex
 }
 
@@ -57,6 +56,7 @@ func New(compare Compare) *List {
 		level:   0,
 		head:    head,
 		compare: compare,
+		rand:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -64,7 +64,7 @@ func New(compare Compare) *List {
 // Generate a level that is at most 1 higher than current max
 func (l *List) randLevel() int {
 	var level int
-	for level = 0; r.Int31n(probability) == 1 && level < maxLevel; level++ {
+	for level = 0; l.rand.Int31n(probability) == 1 && level < maxLevel; level++ {
 		if level > l.level {
 			break
 		}

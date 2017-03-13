@@ -133,7 +133,7 @@ Run a job, blocking until wait-timeout if no workers are available or until TTR,
 
 * `id` - A [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29) in canonical hex format. Example: 6ba7b810-9dad-11d1-80b4-00c04fd430c4. A job id is client provided to act as a natural de-duplicator.
 * `name` - Name of job in alphanumeric characters with the allowance of these special characters: `_`, `-`, `.`. Jobs are enqueued and grouped by name.
-* `ttr` - Allowed time to run in milliseconds, max value is 86400000 (24 hours). TTR starts when a job is leased. When TTR ends, the client receives a `-TIMED-OUT` error.
+* `ttr` - Allowed time to run in milliseconds, max value is 86400000 (24 hours). TTR starts when a job is leased. When TTR ends, the client receives a `-TIMEOUT` error.
 * `wait-timeout` - Milliseconds to wait for jobs to be picked up by a worker before timing out and returning control to the client.
 * `payload-size` - Job payload size in bytes.
 * `payload-bytes` - The byte stream to include as the job's payload. This exact payload without modification will be received by a worker. Max size is 1 MiB or 1,048,576 bytes.
@@ -725,7 +725,7 @@ All error responses start with `-` as the first character to signify an error ty
 
 * `-CLIENT-ERROR <error-description>` - Command is malformed (e.g, Missing required arguments, incorrect payload size)
 * `-SERVER-ERROR <error-description>` - An error has occured while processing a command. This shouldn't happen during normal operation. Please file all server errors to our [Github Issues](https://github.com/iamduo/workq/issues)
-* `-TIMED-OUT` - Command failed to succeed within the `wait-timeout` supplied. Applicable to ["lease"](#lease), ["result"](#result), ["run"](#run) commands.
+* `-TIMEOUT` - Command failed to succeed within the `wait-timeout` supplied. Applicable to ["lease"](#lease), ["result"](#result), ["run"](#run) commands.
 * `-NOT-FOUND` - Job ID specified not found.
 
 ## Glossary

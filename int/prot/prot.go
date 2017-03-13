@@ -21,18 +21,15 @@ const (
 	CmdResult   = "result"
 	CmdInspect  = "inspect"
 
-	termLen = 2 // Length of \r\n terminator
-
 	// Max read for a single cmd read.
 	// 10000 bytes - max command limit +
 	// 1048576 bytes - job max payload
 	MaxRead = 1058576
+
+	termLen = 2 // Length of \r\n terminator
 )
 
 var (
-	sepByte  = []byte{' '}
-	CrnlByte = []byte{'\r', '\n'}
-
 	// ErrReadErr used for primarily EOF read issues
 	// Signifies it may be time to close the conn
 	ErrReadErr            = io.EOF
@@ -40,6 +37,9 @@ var (
 	ErrInvalidCmdFlags    = NewClientErr("Invalid command flags")
 	ErrInvalidPayloadSize = NewClientErr("Invalid payload size")
 	ErrInvalidResultSize  = NewClientErr("Invalid result size")
+
+	sepByte  = []byte{' '}
+	CrnlByte = []byte{'\r', '\n'}
 )
 
 type Interface interface {
@@ -71,35 +71,35 @@ func (p Prot) ParseCmd(rdr *bufio.Reader) (*Cmd, error) {
 		line = line[:len(line)-termLen]
 	}
 
-	var args [][]byte
-	split := bytes.Split(line, sepByte)
-	seen := make(map[string]bool)
+	splitArgs := bytes.Split(line, sepByte)
+	args := make([][]byte, 0, len(splitArgs))
 	flags := make(CmdFlags)
-	for _, v := range split {
+	splitBy := []byte("=")
+	for _, v := range splitArgs {
 		if len(v) == 0 {
 			continue
 		}
 
-		s := bytes.Split(v, []byte("="))
-		if v[0] != '-' || len(s) != 2 {
+		if v[0] != '-' || bytes.IndexByte(v, splitBy[0]) == -1 {
 			args = append(args, v)
 			continue
 		}
 
+		s := bytes.Split(v, splitBy)
+		// Verify flag key and value are not empty
+		// Flag key len includes "-"
 		if len(s[0]) <= 1 || len(s[1]) == 0 {
 			// Do not allow garbage.
 			return nil, ErrInvalidCmdFlags
 		}
 
-		k := string(s[0])
-		// Deny the use of duplicated flags
-		if seen[k] {
+		// Chop "-" prefix
+		k := string(s[0][1:])
+		if _, ok := flags[k]; ok {
 			return nil, ErrInvalidCmdFlags
 		}
 
-		seen[k] = true
-		// Chop "-" prefix
-		flags[k[1:]] = s[1]
+		flags[k] = s[1]
 	}
 
 	argC := len(args)
@@ -107,7 +107,7 @@ func (p Prot) ParseCmd(rdr *bufio.Reader) (*Cmd, error) {
 	// Switch command name on raw input args
 	// First arg must be command name, not flag
 	var cmd *Cmd
-	switch string(split[0]) {
+	switch string(splitArgs[0]) {
 	default:
 		return nil, ErrUnknownCmd
 	case CmdAdd:

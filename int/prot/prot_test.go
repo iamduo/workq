@@ -105,7 +105,6 @@ func TestParseValidCommands(t *testing.T) {
 	}
 
 	prot := &Prot{}
-	// CLIENT-ERROR
 	for _, data := range tests {
 		cmd, err := prot.ParseCmd(bufio.NewReader(bytes.NewReader(data.in)))
 		if err != nil || cmd == nil {
@@ -124,7 +123,7 @@ func TestParseValidCommands(t *testing.T) {
 
 		for k, _ := range data.cmd.Flags {
 			if !bytes.Equal(data.cmd.Flags[k], cmd.Flags[k]) {
-				t.Fatalf("Flags: expected=%v, actual=%v", data.cmd.Flags[k], cmd.Flags[k])
+				t.Fatalf("Flags: key=%s, expected=%s, actual=%s", k, data.cmd.Flags[k], cmd.Flags[k])
 			}
 		}
 	}
@@ -278,6 +277,31 @@ func TestOkResultResp(t *testing.T) {
 func TestOkResp(t *testing.T) {
 	if !bytes.Equal([]byte("OK\r\n"), OkResp()) {
 		t.Fatalf("OkResp mismatch")
+	}
+}
+
+func BenchmarkParseCmd(b *testing.B) {
+	// add 6ba7b810-9dad-11d1-80b4-00c04fd430c4 ping 5000 60000 100\r\n
+	// <payload-bytes>\r\n
+	cmd := []byte("add 6ba7b810-9dad-11d1-80b4-00c04fd430c4 ping 5000 60000 100\r\n")
+	cmd = append(cmd, make([]byte, 100)...)
+	cmd = append(cmd, []byte("\r\n")...)
+	r := bytes.NewReader(cmd)
+	bufR := bufio.NewReader(r)
+
+	p := Prot{}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		_, err := p.ParseCmd(bufR)
+		b.StopTimer()
+
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		r.Reset(cmd)
 	}
 }
 
