@@ -289,7 +289,8 @@ func TestStartCleaningCycle(t *testing.T) {
 	StartCleaningCycle(cleaner, fn, 5)
 	time.Sleep(14 * time.Millisecond)
 
-	if atomic.LoadUint32(&n) != 2 {
-		t.Fatalf("Attempts got=%d, want=2", n)
+	got := atomic.LoadUint32(&n)
+	if got != 2 {
+		t.Fatalf("Attempts got=%d, want=2", got)
 	}
 }
