@@ -7,6 +7,9 @@ This release primarily focuses on the Command Log Persistence feature which allo
 * Added Command Log Persistence! Docs available at [doc/cmdlog](doc/cmdlog.md).
 * Changed error "-TIMED-OUT" to "-TIMEOUT" for consistency.
 * Fixed "run" job expiration issue on successful execution.
+    * "run" commands did not always clean the completed job up after command returns.
+* Fixed "lease" timeout priority and accuracy for lower timeouts (e.g. 10ms).
+    * 10ms timeouts would return a -TIMEOUT intermittently even if there is a job available.
 * Removed "log-file" option, all errors now direct to STDERR.
 
 ### Testing
