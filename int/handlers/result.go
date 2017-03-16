@@ -67,11 +67,11 @@ func (h *ResultHandler) Exec(cmd *prot.Cmd) ([]byte, error) {
 		case <-timer.C:
 			return nil, prot.ErrTimeout
 		case result := <-rec.Wait:
-			return prot.OkResultResp(id, result.Success, result.Result), nil
+			return prot.OkResultResp(id.String(), result.Success, result.Result), nil
 		}
 	}
 
-	resp := prot.OkResultResp(id, rec.Success(), rec.Result)
+	resp := prot.OkResultResp(id.String(), rec.Success(), rec.Result)
 	rec.Mu.RUnlock()
 
 	return resp, nil

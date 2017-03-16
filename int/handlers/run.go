@@ -56,7 +56,7 @@ func (h *RunHandler) Exec(cmd *prot.Cmd) ([]byte, error) {
 		return nil, prot.NewClientErr(err.Error())
 	}
 
-	return prot.OkResultResp(j.ID, r.Success, r.Result), nil
+	return prot.OkResultResp(j.ID.String(), r.Success, r.Result), nil
 }
 
 func buildJobFromRunCmd(cmd *prot.Cmd) (*job.Job, error) {

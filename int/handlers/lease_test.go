@@ -59,9 +59,10 @@ func TestLeaseDefault(t *testing.T) {
 	)
 
 	expResp := []byte(fmt.Sprintf(
-		"OK 1\r\n%s %s %d\r\n%s\r\n",
+		"OK 1\r\n%s %s %d %d\r\n%s\r\n",
 		j.ID.String(),
 		j.Name,
+		j.TTR,
 		len(j.Payload),
 		j.Payload,
 	))

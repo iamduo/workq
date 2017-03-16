@@ -274,16 +274,16 @@ func SendErr(w io.Writer, errStr string) error {
 	return err
 }
 
-func OkJobResp(id job.ID, name string, payload []byte) []byte {
+func OkJobResp(id string, name string, ttr int, payload []byte) []byte {
 	b := []byte("OK 1")
 	b = append(b, CrnlByte...)
-	b = append(b, []byte(fmt.Sprintf("%s %s %d", id, name, len(payload)))...)
+	b = append(b, []byte(fmt.Sprintf("%s %s %d %d", id, name, ttr, len(payload)))...)
 	b = append(b, CrnlByte...)
 	b = append(b, payload...)
 	return append(b, CrnlByte...)
 }
 
-func OkResultResp(id job.ID, success bool, r []byte) []byte {
+func OkResultResp(id string, success bool, r []byte) []byte {
 	successInt := 0
 	if success {
 		successInt = 1

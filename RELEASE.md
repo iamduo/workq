@@ -5,6 +5,8 @@
 This release primarily focuses on the Command Log Persistence feature which allows the recovery of a workq-server.
 
 * Added Command Log Persistence! Docs available at [doc/cmdlog](doc/cmdlog.md).
+* Added TTR to "lease" command replies.
+    * Allows for workers to use TTR as the maximum execution time for the specific job.
 * Changed error "-TIMED-OUT" to "-TIMEOUT" for consistency.
 * Fixed "run" job expiration issue on successful execution.
     * "run" commands did not always clean the completed job up after command returns.

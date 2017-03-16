@@ -250,9 +250,10 @@ func TestSendErr(t *testing.T) {
 func TestOkJobResp(t *testing.T) {
 	var id job.ID
 	name := "a"
+	ttr := 1000
 	payload := []byte("p")
-	expResp := []byte(fmt.Sprintf("OK 1\r\n%s %s %d\r\n%s\r\n", id, name, 1, payload))
-	resp := OkJobResp(id, name, payload)
+	expResp := []byte(fmt.Sprintf("OK 1\r\n%s %s %d %d\r\n%s\r\n", id, name, ttr, 1, payload))
+	resp := OkJobResp(id.String(), name, ttr, payload)
 	if !bytes.Equal(expResp, resp) {
 		t.Fatalf("OkJobResp mismatch, exp=%+v, act=%+v", expResp, resp)
 	}
@@ -262,15 +263,15 @@ func TestOkResultResp(t *testing.T) {
 	var id job.ID
 	payload := []byte("p")
 	expResp := []byte(fmt.Sprintf("OK 1\r\n%s 1 %d\r\n%s\r\n", id, 1, payload))
-	resp := OkResultResp(id, true, payload)
+	resp := OkResultResp(id.String(), true, payload)
 	if !bytes.Equal(expResp, resp) {
-		t.Fatalf("OkJobResp mismatch, exp=%+v, act=%+v", expResp, resp)
+		t.Fatalf("OkResultResp mismatch, exp=%+v, act=%+v", expResp, resp)
 	}
 
 	expResp = []byte(fmt.Sprintf("OK 1\r\n%s 0 %d\r\n%s\r\n", id, 1, payload))
-	resp = OkResultResp(id, false, payload)
+	resp = OkResultResp(id.String(), false, payload)
 	if !bytes.Equal(expResp, resp) {
-		t.Fatalf("OkJobResp mismatch, exp=%+v, act=%+v", expResp, resp)
+		t.Fatalf("OkResultResp mismatch, exp=%+v, act=%+v", expResp, resp)
 	}
 }
 

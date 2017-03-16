@@ -233,8 +233,8 @@ Lease a job by name. Multiple job names can be specified and they will be proces
 
 **Special Considerations**
 
-* There is no *hang forever* mode, however you can simulate this with a long <wait-timeout>. It is recommended to not set a long <wait-timeout> to reduce any unexpected TCP [dead peer](http://tldp.org/HOWTO/TCP-Keepalive-HOWTO/overview.html#checkdeadpeers) issues. In addition, a reasonable wait-timeout time allows the server to keep internals tidy.
-* A worker lease workflow can cross connections. A worker can lease under one connection and finish processing in another connection. This relaxed constraints allows for ease of operation, but it allows for possible worker processing races. For example, a worker can finish a job with `complete` or `fail` **after** a TTR timeout **AND** even after another worker has picked up the job.
+* There is no *hang forever* mode, however you can simulate this with a long `wait-timeout`. It is recommended to not set an unnecessarily long `wait-timeout` to reduce any unexpected TCP [dead peer](http://tldp.org/HOWTO/TCP-Keepalive-HOWTO/overview.html#checkdeadpeers) issues. In addition, a reasonable `wait-timeout` time allows the server to keep internals tidy.
+* A worker lease workflow can cross connections. A worker can lease under one connection and finish processing in another connection. This relaxed constraints allows for ease of operation, but it allows for possible worker processing races. For example, a worker can finish a job with `complete` or `fail` **after** a TTR timeout **AND** even after another worker has picked up the job. Workers should respect the TTR value returned in a lease command and stop execution after TTR has elapsed.
 
 **Example**
 
@@ -248,13 +248,14 @@ lease ping1 ping2 ping3 60000\r\n
 
 ```
 +OK <reply-count>\r\n
-<id> <name> <payload-size>\r\n
+<id> <name> <ttr> <payload-size>\r\n
 <payload-bytes>\r\n
 ```
 
 * `reply-count` - Currently will always be 1, signifying a single leased job.
 * `id` - A [UUIDv4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29) in canonical hex format. Example: 6ba7b810-9dad-11d1-80b4-00c04fd430c4.
 * `name` - Name of job in alphanumeric characters with the allowance of these special characters: `_`, `-`, `.`.
+* `ttr` - Allowed time to run in milliseconds. When TTR ends, the job is re-queued if allowed by the `max-attempts` flag.
 * `payload-size` - Job payload size in bytes.
 * `payload-bytes` - The byte stream included as the job's payload.
 
@@ -262,7 +263,7 @@ lease ping1 ping2 ping3 60000\r\n
 
 ```text
 +OK 1\r\n
-6ba7b810-9dad-11d1-80b4-00c04fd430c4 ping 4\r\n
+6ba7b810-9dad-11d1-80b4-00c04fd430c4 ping 1000 4\r\n
 ping\r\n
 ```
 

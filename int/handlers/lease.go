@@ -57,5 +57,5 @@ func (h *LeaseHandler) Exec(cmd *prot.Cmd) ([]byte, error) {
 		return nil, prot.NewClientErr(err.Error())
 	}
 
-	return prot.OkJobResp(j.ID, j.Name, j.Payload), nil
+	return prot.OkJobResp(j.ID.String(), j.Name, int(j.TTR), j.Payload), nil
 }
