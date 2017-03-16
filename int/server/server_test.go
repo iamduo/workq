@@ -65,7 +65,7 @@ func serverListenAndServe(t *testing.T, s *Server, stop chan struct{}) {
 	}
 
 	go start()
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestWithCmd(t *testing.T) {

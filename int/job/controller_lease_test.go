@@ -15,7 +15,7 @@ func TestLeaseDefault(t *testing.T) {
 	id := ID(testutil.GenID())
 	name := testutil.GenName()
 
-	actJ, err := jc.Lease([]string{name}, 10)
+	actJ, err := jc.Lease([]string{name}, 100)
 	if err != ErrTimeout || actJ != nil {
 		t.Fatalf("No work should be available yet, job=%v, err=%v", actJ, err)
 	}
@@ -38,7 +38,7 @@ func TestLeaseDefault(t *testing.T) {
 		t.Fatalf("Unable to add job to queue")
 	}
 
-	actJ, err = jc.Lease([]string{name}, 10)
+	actJ, err = jc.Lease([]string{name}, 100)
 	if err != nil {
 		t.Fatalf("Lease err=%v", err)
 	}
@@ -182,13 +182,13 @@ func TestLeaseWaitTimeout(t *testing.T) {
 	jc := NewController(reg, qc)
 
 	start := time.Now().UTC()
-	j, err := jc.Lease([]string{testutil.GenName()}, 10)
+	j, err := jc.Lease([]string{testutil.GenName()}, 100)
 	diff := time.Since(start)
 	if err != ErrTimeout || j != nil {
 		t.Fatalf("No work should be available yet, err=%v, job=%v", err, j)
 	}
 
-	if diff < (10*time.Millisecond) || diff >= (15*time.Millisecond) {
+	if diff < (100*time.Millisecond) || diff >= (120*time.Millisecond) {
 		t.Errorf("Run wait-timeout not in range, actual-diff=%s", diff)
 	}
 }
@@ -273,8 +273,9 @@ func TestLeaseMultipleNames(t *testing.T) {
 		rec.Mu.RUnlock()
 
 		ttrDelay := time.Duration(j.TTR) * time.Millisecond
-		// Test overhead padding added.
-		time.Sleep(ttrDelay + ttrDelay/10)
+		// Test overhead padding added (20%)
+		testPad := (ttrDelay / 10) * 2
+		time.Sleep(ttrDelay + testPad)
 		rec.Mu.RLock()
 		if rec.State != StatePending {
 			t.Fatalf("Expected job to be requeued due to TTR, state=%v", rec.State)

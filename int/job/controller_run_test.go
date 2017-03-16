@@ -37,7 +37,7 @@ func TestRunWaitTimeout(t *testing.T) {
 				TTR:         5,
 				Created:     time.Now().UTC(),
 			},
-			expTimeout: 10,
+			expTimeout: 100,
 		},
 	}
 

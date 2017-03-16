@@ -136,14 +136,15 @@ func TestSchedule(t *testing.T) {
 			}
 		}
 		elapsed := time.Now().Sub(start)
-		// Test overhead padding added.
-		if elapsed < delay-delay/10 || elapsed > delay+delay/10 {
+		// Test overhead padding added (20%).
+		pad := ((delay / 10) * 2)
+		if elapsed < delay-pad || elapsed > delay+pad {
 			t.Fatalf("Scheduled time mismatch, act=%s, exp=~%s", elapsed, delay)
 		}
 
-		// Verify job still exists right before TTL, elapsing 90% of TTL.
+		// Verify job still exists right before TTL, elapsing 80% of TTL.
 		expireDelay := time.Duration(tt.expJob.TTL) * time.Millisecond
-		time.Sleep((expireDelay / 10) * 9)
+		time.Sleep((expireDelay / 10) * 8)
 
 		if _, ok = reg.Record(id); !ok {
 			t.Fatalf("Expected record to exist")
@@ -151,7 +152,7 @@ func TestSchedule(t *testing.T) {
 
 		// Verify job expires after ttl.
 		// Test overhead padding added.
-		time.Sleep((expireDelay / 10) * 2)
+		time.Sleep((expireDelay / 10) * 4)
 
 		_, ok = reg.Record(id)
 		if ok {

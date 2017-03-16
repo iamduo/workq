@@ -286,8 +286,8 @@ func TestStartCleaningCycle(t *testing.T) {
 		atomic.AddUint32(&n, 1)
 		return false, nil
 	}
-	StartCleaningCycle(cleaner, fn, 5)
-	time.Sleep(14 * time.Millisecond)
+	StartCleaningCycle(cleaner, fn, 100)
+	time.Sleep(250 * time.Millisecond)
 
 	got := atomic.LoadUint32(&n)
 	if got != 2 {

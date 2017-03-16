@@ -126,7 +126,7 @@ func TestAdd(t *testing.T) {
 
 		// Verify job still exists right before TTL, elapsing 90% of TTL.
 		expireDelay := time.Duration(tt.expJob.TTL) * time.Millisecond
-		time.Sleep((expireDelay / 10) * 9)
+		time.Sleep((expireDelay / 10) * 8)
 
 		if _, ok = reg.Record(id); !ok {
 			t.Fatalf("Expected record to exist")
@@ -138,7 +138,7 @@ func TestAdd(t *testing.T) {
 
 		// Verify job expires after ttl.
 		// Test overhead padding added.
-		time.Sleep((expireDelay / 10) * 2)
+		time.Sleep((expireDelay / 10) * 4)
 
 		if qc.Exists(actJob) {
 			t.Fatalf("Expected job to be expired")
@@ -252,7 +252,7 @@ func TestAddInvalidArgs(t *testing.T) {
 	reg := NewRegistry()
 	qc := NewQueueController()
 	jc := NewController(reg, qc)
-	//handler := NewAddHandler(&AddControllerMock{})
+
 	id := ID(testutil.GenID())
 	name := testutil.GenName()
 	tests := []struct {
@@ -262,8 +262,8 @@ func TestAddInvalidArgs(t *testing.T) {
 		{
 			job: &Job{
 				Name:    name,
-				TTR:     1,
-				TTL:     1,
+				TTR:     100,
+				TTL:     1000,
 				Created: time.Now().UTC(),
 			},
 			err: ErrInvalidID,
@@ -271,8 +271,8 @@ func TestAddInvalidArgs(t *testing.T) {
 		{
 			job: &Job{
 				ID:      id,
-				TTR:     1,
-				TTL:     1,
+				TTR:     100,
+				TTL:     1000,
 				Created: time.Now().UTC(),
 			},
 			err: ErrInvalidName,
@@ -281,8 +281,8 @@ func TestAddInvalidArgs(t *testing.T) {
 			job: &Job{
 				ID:      id,
 				Name:    "*",
-				TTR:     1,
-				TTL:     1,
+				TTR:     100,
+				TTL:     1000,
 				Created: time.Now().UTC(),
 			},
 			err: ErrInvalidName,
@@ -291,7 +291,7 @@ func TestAddInvalidArgs(t *testing.T) {
 			job: &Job{
 				ID:      id,
 				Name:    name,
-				TTL:     1,
+				TTL:     100,
 				Created: time.Now().UTC(),
 			},
 			err: ErrInvalidTTR,
@@ -300,7 +300,7 @@ func TestAddInvalidArgs(t *testing.T) {
 			job: &Job{
 				ID:      id,
 				Name:    name,
-				TTR:     1,
+				TTR:     100,
 				Created: time.Now().UTC(),
 			},
 			err: ErrInvalidTTL,
@@ -309,7 +309,7 @@ func TestAddInvalidArgs(t *testing.T) {
 			job: &Job{
 				ID:      id,
 				Name:    name,
-				TTR:     1,
+				TTR:     100,
 				Created: time.Now().UTC(),
 			},
 			err: ErrInvalidTTL,
@@ -318,7 +318,7 @@ func TestAddInvalidArgs(t *testing.T) {
 			job: &Job{
 				ID:      id,
 				Name:    name,
-				TTR:     1,
+				TTR:     100,
 				TTL:     1000,
 				Created: time.Now().Add(-10 * time.Second).UTC(),
 			},
@@ -328,8 +328,8 @@ func TestAddInvalidArgs(t *testing.T) {
 			job: &Job{
 				ID:      id,
 				Name:    name,
-				TTR:     1,
-				TTL:     1,
+				TTR:     100,
+				TTL:     1000,
 				Payload: make([]byte, MaxPayload+1),
 				Created: time.Now().UTC(),
 			},

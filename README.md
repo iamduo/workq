@@ -1,4 +1,4 @@
-# Workq [![Build Status](https://travis-ci.org/iamduo/workq.svg?branch=master)](https://travis-ci.org/iamduo/workq) [![Coverage Status](https://coveralls.io/repos/github/iamduo/workq/badge.svg?branch=master)](https://coveralls.io/github/iamduo/workq?branch=master) ![Project Status](https://img.shields.io/badge/status-alpha-yellow.svg)
+# Workq [![Build Status](https://travis-ci.org/iamduo/workq.svg?branch=master)](https://travis-ci.org/iamduo/workq) [![Coverage Status](https://coveralls.io/repos/github/iamduo/workq/badge.svg?branch=master)](https://coveralls.io/github/iamduo/workq?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/iamduo/workq)](https://goreportcard.com/report/github.com/iamduo/workq) ![Project Status](https://img.shields.io/badge/status-alpha-yellow.svg)
 
 Workq is a job scheduling server strictly focused on simplifying job processing and streamlining coordination. It can run jobs in blocking foreground or non-blocking background mode.
 
