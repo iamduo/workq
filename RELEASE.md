@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.2.1
+
+This patch release fixes a [breaking api change](https://github.com/satori/go.uuid/commit/0ef6afb2f6cdd6cdaeee3885a95099c63f18fc8c) in the satori/go.uuid package where the function signature changed for `uuid.NewV4()`.
+
 ## 0.2.0
 
 This release primarily focuses on the Command Log Persistence feature which allows the recovery of a workq-server.

@@ -170,7 +170,7 @@ func TestCleanSkipSegment(t *testing.T) {
 
 	for i := range expTimes {
 		if !actTimes[i].Equal(expTimes[i]) {
-			t.Fatalf("Mod times act=%d, exp=%d", actTimes[i], expTimes[i])
+			t.Fatalf("Mod times act=%s, exp=%s", actTimes[i], expTimes[i])
 		}
 	}
 }

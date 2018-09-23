@@ -91,7 +91,7 @@ func TestCursorWithUnreadableSegmentFile(t *testing.T) {
 	s := NewStream("./test/cursor-next", testMagicHeader)
 	c, err := s.OpenCursor()
 	if err != nil {
-		t.Fatal("Open Cursor err=%s", err)
+		t.Fatalf("Open Cursor err=%s", err)
 	}
 
 	c.segments = []*segmentInfo{

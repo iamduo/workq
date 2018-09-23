@@ -37,7 +37,7 @@ type Client struct {
 func New(conn Conn, n int64) *Client {
 	limitRdr := &io.LimitedReader{R: conn, N: n}
 	c := &Client{
-		id:       uuid.NewV4(),
+		id:       uuid.Must(uuid.NewV4()),
 		conn:     conn,
 		rdr:      bufio.NewReader(limitRdr),
 		limitRdr: limitRdr,

@@ -18,11 +18,11 @@ import (
 // FYI, There will be a replacement to this at a later time.
 
 func GenID() uuid.UUID {
-	return uuid.NewV4()
+	return uuid.Must(uuid.NewV4())
 }
 
 func GenIDString() string {
-	return uuid.NewV4().String()
+	return GenID().String()
 }
 
 func GenName() string {
